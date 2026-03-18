@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("student") // "student" | "admin"
+  createdAt DateTime @default(now())
+
+  attempts        UserAttempt[]
+  mockExamResults MockExamResult[]
+  essayAttempts   EssayAttempt[]
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  subject       String   // "part1" | "part2"
+  topic         String
+  content       String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctAnswer String   // "A" | "B" | "C" | "D"
+  explanation   String
+  difficulty    String   @default("medium") // "easy" | "medium" | "hard"
+  language      String   @default("en")     // "en" | "ja"
+  createdAt     DateTime @default(now())
+
+  attempts UserAttempt[]
+}
+
+model EssayQuestion {
+  id          String   @id @default(cuid())
+  subject     String   // "part1" | "part2"
+  topic       String
+  content     String   // scenario / question text
+  modelAnswer String
+  examNumber  Int?     // 1/2/3 if linked to a specific mock exam, null = practice only
+  language    String   @default("en")
+  createdAt   DateTime @default(now())
+
+  attempts EssayAttempt[]
+}
+
+model EssayAttempt {
+  id              String   @id @default(cuid())
+  userId          String
+  essayQuestionId String
+  selfScore       Int      // 0=didn't know, 1=partial, 2=knew it
+  createdAt       DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question EssayQuestion @relation(fields: [essayQuestionId], references: [id], onDelete: Cascade)
+}
+
+model UserAttempt {
+  id             String   @id @default(cuid())
+  userId         String
+  questionId     String
+  selectedAnswer String
+  isCorrect      Boolean
+  createdAt      DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model MockExamResult {
+  id          String   @id @default(cuid())
+  userId      String
+  subject     String   // "part1" | "part2"
+  examNumber  Int      // 1, 2, 3
+  score       Int      // MCQ correct count
+  total       Int      // MCQ total count
+  percentage  Float
+  timeSeconds Int?     // seconds taken
+  answers     String   // JSON: {"questionId": "selectedAnswer", ...}
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
